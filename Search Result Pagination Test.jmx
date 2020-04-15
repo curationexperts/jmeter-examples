@@ -13,9 +13,19 @@
             <stringProp name="Argument.value">tenejo.curationexperts.com</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
-          <elementProp name="max_page" elementType="Argument">
-            <stringProp name="Argument.name">max_page</stringProp>
-            <stringProp name="Argument.value">4</stringProp>
+          <elementProp name="test_users" elementType="Argument">
+            <stringProp name="Argument.name">test_users</stringProp>
+            <stringProp name="Argument.value">${__P(users)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="test_iterations" elementType="Argument">
+            <stringProp name="Argument.name">test_iterations</stringProp>
+            <stringProp name="Argument.value">1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="loops_per_user" elementType="Argument">
+            <stringProp name="Argument.name">loops_per_user</stringProp>
+            <stringProp name="Argument.value">${__P(loops_per_user)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -23,14 +33,14 @@
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp Thread Group" enabled="true">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="Get Page Count (SetUp Thread)" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
@@ -57,20 +67,25 @@
         </HTTPSamplerProxy>
         <hashTree/>
         <HtmlExtractor guiclass="HtmlExtractorGui" testclass="HtmlExtractor" testname="Result Page Count" enabled="true">
-          <stringProp name="HtmlExtractor.refname">max_pages</stringProp>
+          <stringProp name="HtmlExtractor.refname">search_result_pages</stringProp>
           <stringProp name="HtmlExtractor.expr">.pagination &gt; li:last-child</stringProp>
           <stringProp name="HtmlExtractor.attribute"></stringProp>
-          <stringProp name="HtmlExtractor.default">1</stringProp>
-          <boolProp name="HtmlExtractor.default_empty_value">false</boolProp>
+          <stringProp name="HtmlExtractor.default"></stringProp>
+          <boolProp name="HtmlExtractor.default_empty_value">true</boolProp>
           <stringProp name="HtmlExtractor.match_number">1</stringProp>
           <stringProp name="HtmlExtractor.extractor_impl"></stringProp>
         </HtmlExtractor>
         <hashTree/>
-        <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="true">
-          <boolProp name="displayJMeterProperties">false</boolProp>
-          <boolProp name="displayJMeterVariables">true</boolProp>
-          <boolProp name="displaySystemProperties">false</boolProp>
-        </DebugSampler>
+        <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Set max_pages property" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">page_count = vars.get(&apos;search_result_pages&apos;)
+props.put(&apos;max_pages&apos;, page_count )
+
+// log.info &quot;PROPERTY max_pages: &quot; + max_pages.toString()</stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+        </JSR223Assertion>
         <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Search Results Paging" enabled="true">
@@ -79,14 +94,52 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">10</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${test_users}</stringProp>
         <stringProp name="ThreadGroup.ramp_time">0</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.delayedStart">true</boolProp>
       </ThreadGroup>
       <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">Integer loop_count
+
+last_page = props.get(&quot;max_pages&quot;).toInteger()
+loop_count = vars.get(&quot;loops_per_user&quot;).toInteger() * last_page
+vars.putObject(&apos;loop_count&apos;, loop_count)
+vars.putObject(&apos;last_page&apos;, last_page)
+
+log.info &apos;loops_per_user: &apos; + vars.get(&quot;loops_per_user&quot;)
+log.info &apos;max_pages (property): &apos; + props.get(&apos;max_pages&apos;)
+log.info &apos;loop_count: &apos; + vars.get(&quot;loop_count&quot;).toString()
+
+// SampleResult.setIgnore()</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor" enabled="false">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">Integer loop_count
+
+loop_count = vars.get(&quot;loops_per_user&quot;).toInteger() * props.get(&quot;max_pages&quot;).toInteger()
+vars.putObject(&apos;loop_count&apos;, loop_count)
+
+log.info &apos;loops_per_user: &apos; + vars.get(&quot;loops_per_user&quot;)
+log.info &apos;max_page: &apos; + vars.get(&quot;max_page&quot;)
+log.info &apos;max_pages (property): &apos; + props.get(&apos;max_pages&apos;)
+log.info &apos;loop_count: &apos; + vars.get(&quot;loop_count&quot;).toString()
+
+// SampleResult.setIgnore()</stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
         <AuthManager guiclass="AuthPanel" testclass="AuthManager" testname="HTTP Authorization Manager" enabled="true">
           <collectionProp name="AuthManager.auth_list">
             <elementProp name="" elementType="Authorization">
@@ -102,12 +155,12 @@
         <hashTree/>
         <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">true</boolProp>
-          <stringProp name="LoopController.loops">100</stringProp>
+          <stringProp name="LoopController.loops">${loop_count}</stringProp>
         </LoopController>
         <hashTree>
           <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="Counter" enabled="true">
             <stringProp name="CounterConfig.start">1</stringProp>
-            <stringProp name="CounterConfig.end">${max_page}</stringProp>
+            <stringProp name="CounterConfig.end">${last_page}</stringProp>
             <stringProp name="CounterConfig.incr">1</stringProp>
             <stringProp name="CounterConfig.name">page_num</stringProp>
             <stringProp name="CounterConfig.format"></stringProp>
@@ -133,33 +186,13 @@
             <stringProp name="HTTPSampler.response_timeout"></stringProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="true">
+          <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="false">
             <boolProp name="displayJMeterProperties">false</boolProp>
             <boolProp name="displayJMeterVariables">true</boolProp>
             <boolProp name="displaySystemProperties">false</boolProp>
           </DebugSampler>
           <hashTree/>
         </hashTree>
-        <HtmlExtractor guiclass="HtmlExtractorGui" testclass="HtmlExtractor" testname="Previous Results" enabled="true">
-          <stringProp name="HtmlExtractor.refname">prev_link</stringProp>
-          <stringProp name="HtmlExtractor.expr">.pagination &gt; li &gt; a</stringProp>
-          <stringProp name="HtmlExtractor.attribute">href</stringProp>
-          <stringProp name="HtmlExtractor.default"></stringProp>
-          <boolProp name="HtmlExtractor.default_empty_value">false</boolProp>
-          <stringProp name="HtmlExtractor.match_number">1</stringProp>
-          <stringProp name="HtmlExtractor.extractor_impl"></stringProp>
-        </HtmlExtractor>
-        <hashTree/>
-        <HtmlExtractor guiclass="HtmlExtractorGui" testclass="HtmlExtractor" testname="Next Results" enabled="true">
-          <stringProp name="HtmlExtractor.refname">next_link</stringProp>
-          <stringProp name="HtmlExtractor.expr">.pagination &gt; li &gt; a</stringProp>
-          <stringProp name="HtmlExtractor.attribute">href</stringProp>
-          <stringProp name="HtmlExtractor.default"></stringProp>
-          <boolProp name="HtmlExtractor.default_empty_value">false</boolProp>
-          <stringProp name="HtmlExtractor.match_number">2</stringProp>
-          <stringProp name="HtmlExtractor.extractor_impl"></stringProp>
-        </HtmlExtractor>
-        <hashTree/>
       </hashTree>
       <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
@@ -234,6 +267,10 @@
         </objProp>
         <stringProp name="filename"></stringProp>
       </ResultCollector>
+      <hashTree/>
+      <ConfigTestElement guiclass="PropertyControlGui" testclass="ConfigTestElement" testname="Property Display" enabled="false">
+        <stringProp name="TestPlan.comments">max_pages set in the SetUp Thread</stringProp>
+      </ConfigTestElement>
       <hashTree/>
     </hashTree>
   </hashTree>
